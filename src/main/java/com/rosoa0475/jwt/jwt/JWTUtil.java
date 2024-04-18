@@ -28,15 +28,19 @@ public class JWTUtil {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("role", String.class);
     }
 
-    public Boolean isExpired(String token) {
+    public String getCategory(String token){
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("category", String.class);
+    }
 
-                                                                                //현재 시간 기준으로 before이면 true 반환
+    public Boolean isExpired(String token) {
+                                                                                //현재 시간 기준으로 before이면 true 반환 아니면 error 발생
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
     }
 
-    public String createToken(String username, String role, Long expiredMs){
+    public String createJwt(String category, String username, String role, Long expiredMs){
                 //jwt token 만들어서 반환
         return Jwts.builder()
+                .claim("category", category)
                 .claim("username", username) // Payload에 값 저장하는 함수
                 .claim("role",role)
                 .issuedAt(new Date(System.currentTimeMillis())) // 토큰이 만들어진 시간

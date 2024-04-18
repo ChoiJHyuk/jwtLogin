@@ -1,8 +1,10 @@
 package com.rosoa0475.jwt.config;
 
+import com.rosoa0475.jwt.jwt.CustomLogoutFilter;
 import com.rosoa0475.jwt.jwt.JWTFilter;
 import com.rosoa0475.jwt.jwt.JWTUtil;
 import com.rosoa0475.jwt.jwt.LoginFilter;
+import com.rosoa0475.jwt.repository.RefreshRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +17,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -23,6 +26,7 @@ public class SecurityConfig {
 
     private final AuthenticationConfiguration authenticationConfiguration;
     private final JWTUtil jwtUtil;
+    private final RefreshRepository refreshRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -39,15 +43,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests((auth)->auth
                         .requestMatchers("/login", "/", "/join").permitAll()
                         .requestMatchers("/admin").hasRole("ADMIN")
+                        .requestMatchers("/reissue").permitAll()
                         .anyRequest().authenticated());
         http       // UsernamePasswordAuthenticationFilter자리에 LoginFilter 넣음 / authenticationManager()함수로 인자 전달
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration),jwtUtil), UsernamePasswordAuthenticationFilter.class);
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration),jwtUtil, refreshRepository), UsernamePasswordAuthenticationFilter.class);
         //jwt는 세션을 stateless로 관리하므로 stateless란 서버가 클라이언트의 상태를 보존하지 않는 것으로 서버 무한 확장이 가능해진다.
         http
                 .addFilterBefore(new JWTFilter(jwtUtil), LoginFilter.class);
         http
                 .sessionManagement((session)-> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http
+                .addFilterBefore(new CustomLogoutFilter(jwtUtil,refreshRepository), LogoutFilter.class);
 
         return http.build();
     }
